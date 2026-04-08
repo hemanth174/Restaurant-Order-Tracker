@@ -4,22 +4,44 @@ const { getDb, saveDb } = require('../db/database');
 
 const STATUS_FLOW = ['Preparing', 'Ready', 'Completed'];
 
+function rowToOrder(row) {
+  return {
+    id: row[0],
+    item_name: row[1],
+    quantity: row[2],
+    status: row[3],
+    created_at: row[4],
+    updated_at: row[5]
+  };
+}
+
+function getOrders() {
+  const db = getDb();
+  const result = db.exec('SELECT * FROM orders ORDER BY created_at DESC');
+
+  if (result.length === 0) {
+    return [];
+  }
+
+  return result[0].values.map(rowToOrder);
+}
+
+function getOrderById(id) {
+  const db = getDb();
+  const result = db.exec(`SELECT * FROM orders WHERE id = ${id}`);
+
+  if (result.length === 0 || result[0].values.length === 0) {
+    return null;
+  }
+
+  return rowToOrder(result[0].values[0]);
+}
+
 router.get('/', (req, res) => {
   try {
-    const db = getDb();
-    const result = db.exec('SELECT * FROM orders ORDER BY created_at DESC');
-    const orders = result.length > 0 ? result[0].values.map(row => ({
-      id: row[0],
-      item_name: row[1],
-      quantity: row[2],
-      status: row[3],
-      created_at: row[4],
-      updated_at: row[5]
-    })) : [];
-
     res.json({
       message: 'Orders fetched successfully',
-      orders
+      orders: getOrders()
     });
   } catch (err) {
     res.status(500).json({ message: 'Unable to fetch orders. Please try again.' });
@@ -46,20 +68,9 @@ router.post('/', (req, res) => {
 
     saveDb();
 
-    const orderResult = db.exec(`SELECT * FROM orders WHERE id = ${newId}`);
-    const row = orderResult[0].values[0];
-    const newOrder = {
-      id: row[0],
-      item_name: row[1],
-      quantity: row[2],
-      status: row[3],
-      created_at: row[4],
-      updated_at: row[5]
-    };
-
     res.status(201).json({
       message: 'Order created successfully',
-      order: newOrder
+      order: getOrderById(newId)
     });
   } catch (err) {
     res.status(500).json({ message: 'Unable to create order. Please try again.' });
@@ -71,20 +82,10 @@ router.patch('/:id/status', (req, res) => {
     const { id } = req.params;
     const db = getDb();
 
-    const result = db.exec(`SELECT * FROM orders WHERE id = ${id}`);
-    if (result.length === 0 || result[0].values.length === 0) {
+    const order = getOrderById(id);
+    if (!order) {
       return res.status(404).json({ message: 'Order not found' });
     }
-
-    const row = result[0].values[0];
-    const order = {
-      id: row[0],
-      item_name: row[1],
-      quantity: row[2],
-      status: row[3],
-      created_at: row[4],
-      updated_at: row[5]
-    };
 
     const currentIndex = STATUS_FLOW.indexOf(order.status);
     if (currentIndex === -1 || currentIndex >= STATUS_FLOW.length - 1) {
@@ -96,20 +97,9 @@ router.patch('/:id/status', (req, res) => {
     db.run(`UPDATE orders SET status = '${newStatus}', updated_at = '${now}' WHERE id = ${id}`);
     saveDb();
 
-    const updatedResult = db.exec(`SELECT * FROM orders WHERE id = ${id}`);
-    const updatedRow = updatedResult[0].values[0];
-    const updatedOrder = {
-      id: updatedRow[0],
-      item_name: updatedRow[1],
-      quantity: updatedRow[2],
-      status: updatedRow[3],
-      created_at: updatedRow[4],
-      updated_at: updatedRow[5]
-    };
-
     res.json({
       message: `Order moved to ${newStatus}`,
-      order: updatedOrder
+      order: getOrderById(id)
     });
   } catch (err) {
     res.status(500).json({ message: 'Unable to update order status. Please try again.' });
