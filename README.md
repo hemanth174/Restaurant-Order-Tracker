@@ -36,4 +36,4 @@ App runs on http://localhost:5173
 ### Frontend (Vercel)
 1. Import project on Vercel
 2. Set root directory: `Frontend`
-3. Add env variable: `VITE_API_URL` = your Render backend URL + `/api/orders`
+3. Add env variable: `API_URL` = your Render backend URL + `/api/orders`

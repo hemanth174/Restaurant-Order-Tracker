@@ -2,7 +2,6 @@ import { useState } from 'react'
 import OrderCard from './OrderCard'
 import { Flame, CheckCircle2, TicketCheck, Search, FileX2 } from 'lucide-react'
 
-// Map statuses to appropriate icons for unified list display if needed
 const getStatusIcon = (status) => {
   if (status === 'Preparing') return <Flame className="w-4 h-4 text-orange-500" />
   if (status === 'Ready') return <TicketCheck className="w-4 h-4 text-blue-500" />
@@ -18,7 +17,6 @@ function OrderList({ orders, onUpdateStatus }) {
 
   return (
     <div className="max-w-4xl mx-auto items-start pb-20 space-y-6">
-      {/* Search Bar Section */}
       <div className="relative group">
         <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none text-slate-400 group-focus-within:text-emerald-500 transition-colors">
           <Search className="w-5 h-5" strokeWidth={2.5} />
@@ -30,16 +28,12 @@ function OrderList({ orders, onUpdateStatus }) {
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full pl-14 pr-6 py-4 bg-white border border-slate-200 rounded-[20px] text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all font-medium hover:border-slate-300 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] placeholder:select-none"
         />
-        
-        {/* Right side badge showing count */}
         <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
           <div className="bg-slate-100 text-slate-500 text-xs font-bold px-3 py-1.5 rounded-full border border-slate-200/60 shadow-sm">
             {filteredOrders.length} {filteredOrders.length === 1 ? 'Order' : 'Orders'}
           </div>
         </div>
       </div>
-
-      {/* Orders List */}
       <div className="bg-slate-50/50 rounded-[24px] p-4 lg:p-6 border border-slate-200 shadow-sm min-h-[500px]">
         {filteredOrders.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-slate-400 h-full text-center px-4 animate-in fade-in slide-in-from-bottom-4 duration-500">

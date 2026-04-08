@@ -5,7 +5,8 @@ const { getDb, saveDb } = require('../db/database');
 const STATUS_FLOW = ['Preparing', 'Ready', 'Completed'];
 
 router.get('/', (req, res) => {
-  const db = getDb();
+  try{
+    const db = getDb();
   const result = db.exec('SELECT * FROM orders ORDER BY created_at DESC');
   const orders = result.length > 0 ? result[0].values.map(row => ({
     id: row[0],
@@ -16,6 +17,9 @@ router.get('/', (req, res) => {
     updated_at: row[5]
   })) : [];
   res.json(orders);
+  }catch(err){
+    res.status(404).json({message : "Fetching Error please Try Again"})
+  }
 });
 
 router.post('/', (req, res) => {
@@ -32,7 +36,6 @@ router.post('/', (req, res) => {
     [item_name.trim(), quantity, 'Preparing', now, now]
   );
   
-  // Must get the ID before saveDb() is called, as db.export() clears last_insert_rowid()
   const result = db.exec('SELECT last_insert_rowid()');
   const newId = result[0].values[0][0];
   

@@ -4,7 +4,7 @@ import OrderForm from './components/OrderForm'
 import OrderList from './components/OrderList'
 import { UtensilsCrossed } from 'lucide-react'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/orders'
+const API_URL = import.meta.env.API_URL || 'http://localhost:3001/api/orders'
 
 function App() {
   const [orders, setOrders] = useState([])

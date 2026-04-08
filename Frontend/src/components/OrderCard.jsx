@@ -43,8 +43,6 @@ function OrderCard({ order, onUpdateStatus }) {
 
   return (
     <div className={`relative p-5 rounded-[20px] shadow-[0_4px_12px_-4px_rgba(0,0,0,0.03)] border border-slate-100 transition-all duration-300 hover:shadow-[0_8px_20px_-4px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 overflow-hidden group ${config.cardBg} ${config.opacity || ''}`}>
-      
-      {/* Left indicator strip */}
       <div className={`absolute left-0 top-0 bottom-0 w-[5px] ${config.indicator}`}></div>
       
       <div className="flex justify-between items-start mb-4 pl-2">
