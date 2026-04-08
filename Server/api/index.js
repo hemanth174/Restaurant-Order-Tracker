@@ -1,28 +1,11 @@
 const express = require('express');
 const cors = require('cors');
-const initSqlJs = require('sql.js');
 
 const app = express();
 
-// In-memory database (resets on cold start - Vercel limitation)
-let db = null;
-
-async function initDb() {
-  if (db) return db;
-  const SQL = await initSqlJs();
-  db = new SQL.Database();
-  db.run(`
-    CREATE TABLE IF NOT EXISTS orders (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      item_name TEXT NOT NULL,
-      quantity INTEGER NOT NULL DEFAULT 1,
-      status TEXT NOT NULL DEFAULT 'Preparing',
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-  return db;
-}
+// In-memory storage (resets on cold start - Vercel limitation)
+let orders = [];
+let nextId = 1;
 
 // Middleware
 app.use(cors());
@@ -36,28 +19,20 @@ app.get('/api/health', (req, res) => {
 });
 
 // Get all orders
-app.get('/api/orders', async (req, res) => {
+app.get('/api/orders', (req, res) => {
   try {
-    await initDb();
-    const result = db.exec('SELECT * FROM orders ORDER BY created_at DESC');
-    const orders = result.length > 0 ? result[0].values.map(row => ({
-      id: row[0],
-      item_name: row[1],
-      quantity: row[2],
-      status: row[3],
-      created_at: row[4],
-      updated_at: row[5]
-    })) : [];
-    res.json(orders);
+    const sortedOrders = [...orders].sort((a, b) => 
+      new Date(b.created_at) - new Date(a.created_at)
+    );
+    res.json(sortedOrders);
   } catch (err) {
     res.status(500).json({ message: 'Fetching Error please Try Again' });
   }
 });
 
 // Create order
-app.post('/api/orders', async (req, res) => {
+app.post('/api/orders', (req, res) => {
   try {
-    await initDb();
     const { item_name, quantity = 1 } = req.body;
 
     if (!item_name || item_name.trim() === '') {
@@ -65,25 +40,16 @@ app.post('/api/orders', async (req, res) => {
     }
 
     const now = new Date().toISOString();
-    db.run(
-      'INSERT INTO orders (item_name, quantity, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
-      [item_name.trim(), quantity, 'Preparing', now, now]
-    );
-
-    const result = db.exec('SELECT last_insert_rowid()');
-    const newId = result[0].values[0][0];
-
-    const orderResult = db.exec(`SELECT * FROM orders WHERE id = ${newId}`);
-    const row = orderResult[0].values[0];
     const newOrder = {
-      id: row[0],
-      item_name: row[1],
-      quantity: row[2],
-      status: row[3],
-      created_at: row[4],
-      updated_at: row[5]
+      id: nextId++,
+      item_name: item_name.trim(),
+      quantity,
+      status: 'Preparing',
+      created_at: now,
+      updated_at: now
     };
 
+    orders.push(newOrder);
     res.status(201).json(newOrder);
   } catch (err) {
     res.status(500).json({ error: 'Failed to create order' });
@@ -91,47 +57,24 @@ app.post('/api/orders', async (req, res) => {
 });
 
 // Update order status
-app.patch('/api/orders/:id/status', async (req, res) => {
+app.patch('/api/orders/:id/status', (req, res) => {
   try {
-    await initDb();
-    const { id } = req.params;
+    const id = parseInt(req.params.id);
+    const order = orders.find(o => o.id === id);
 
-    const result = db.exec(`SELECT * FROM orders WHERE id = ${id}`);
-    if (result.length === 0 || result[0].values.length === 0) {
+    if (!order) {
       return res.status(404).json({ error: 'Order not found' });
     }
-
-    const row = result[0].values[0];
-    const order = {
-      id: row[0],
-      item_name: row[1],
-      quantity: row[2],
-      status: row[3],
-      created_at: row[4],
-      updated_at: row[5]
-    };
 
     const currentIndex = STATUS_FLOW.indexOf(order.status);
     if (currentIndex === -1 || currentIndex >= STATUS_FLOW.length - 1) {
       return res.status(400).json({ error: 'Order is already completed' });
     }
 
-    const newStatus = STATUS_FLOW[currentIndex + 1];
-    const now = new Date().toISOString();
-    db.run(`UPDATE orders SET status = '${newStatus}', updated_at = '${now}' WHERE id = ${id}`);
+    order.status = STATUS_FLOW[currentIndex + 1];
+    order.updated_at = new Date().toISOString();
 
-    const updatedResult = db.exec(`SELECT * FROM orders WHERE id = ${id}`);
-    const updatedRow = updatedResult[0].values[0];
-    const updatedOrder = {
-      id: updatedRow[0],
-      item_name: updatedRow[1],
-      quantity: updatedRow[2],
-      status: updatedRow[3],
-      created_at: updatedRow[4],
-      updated_at: updatedRow[5]
-    };
-
-    res.json(updatedOrder);
+    res.json(order);
   } catch (err) {
     res.status(500).json({ error: 'Failed to update order' });
   }
