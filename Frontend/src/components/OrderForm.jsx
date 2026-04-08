@@ -5,12 +5,14 @@ function OrderForm({ onCreateOrder }) {
   const [itemName, setItemName] = useState('')
   const [quantity, setQuantity] = useState(1)
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     if (itemName.trim()) {
-      onCreateOrder(itemName, quantity)
-      setItemName('')
-      setQuantity(1)
+      const created = await onCreateOrder(itemName, quantity)
+      if (created) {
+        setItemName('')
+        setQuantity(1)
+      }
     }
   }
 

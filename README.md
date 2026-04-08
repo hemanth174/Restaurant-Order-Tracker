@@ -32,8 +32,10 @@ App runs on http://localhost:5173
 2. Set root directory: `Server`
 3. Build command: `npm install`
 4. Start command: `npm start`
+5. After deploy, verify `https://your-render-url/api/health` returns JSON
 
 ### Frontend (Vercel)
 1. Import project on Vercel
 2. Set root directory: `Frontend`
-3. Add env variable: `API_URL` = your Render backend URL + `/api/orders`
+3. Add env variable: `VITE_API_URL` = your Render backend base URL
+4. Example: `VITE_API_URL=https://your-render-url.onrender.com`

@@ -5,97 +5,115 @@ const { getDb, saveDb } = require('../db/database');
 const STATUS_FLOW = ['Preparing', 'Ready', 'Completed'];
 
 router.get('/', (req, res) => {
-  try{
+  try {
     const db = getDb();
-  const result = db.exec('SELECT * FROM orders ORDER BY created_at DESC');
-  const orders = result.length > 0 ? result[0].values.map(row => ({
-    id: row[0],
-    item_name: row[1],
-    quantity: row[2],
-    status: row[3],
-    created_at: row[4],
-    updated_at: row[5]
-  })) : [];
-  res.json(orders);
-  }catch(err){
-    res.status(404).json({message : "Fetching Error please Try Again"})
+    const result = db.exec('SELECT * FROM orders ORDER BY created_at DESC');
+    const orders = result.length > 0 ? result[0].values.map(row => ({
+      id: row[0],
+      item_name: row[1],
+      quantity: row[2],
+      status: row[3],
+      created_at: row[4],
+      updated_at: row[5]
+    })) : [];
+
+    res.json({
+      message: 'Orders fetched successfully',
+      orders
+    });
+  } catch (err) {
+    res.status(500).json({ message: 'Unable to fetch orders. Please try again.' });
   }
 });
 
 router.post('/', (req, res) => {
-  const { item_name, quantity = 1 } = req.body;
-  
-  if (!item_name || item_name.trim() === '') {
-    return res.status(400).json({ error: 'Item name is required' });
-  }
+  try {
+    const { item_name, quantity = 1 } = req.body;
 
-  const db = getDb();
-  const now = new Date().toISOString();
-  db.run(
-    'INSERT INTO orders (item_name, quantity, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
-    [item_name.trim(), quantity, 'Preparing', now, now]
-  );
-  
-  const result = db.exec('SELECT last_insert_rowid()');
-  const newId = result[0].values[0][0];
-  
-  saveDb();
-  
-  const orderResult = db.exec(`SELECT * FROM orders WHERE id = ${newId}`);
-  const row = orderResult[0].values[0];
-  const newOrder = {
-    id: row[0],
-    item_name: row[1],
-    quantity: row[2],
-    status: row[3],
-    created_at: row[4],
-    updated_at: row[5]
-  };
-  
-  res.status(201).json(newOrder);
+    if (!item_name || item_name.trim() === '') {
+      return res.status(400).json({ message: 'Item name is required' });
+    }
+
+    const db = getDb();
+    const now = new Date().toISOString();
+    db.run(
+      'INSERT INTO orders (item_name, quantity, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
+      [item_name.trim(), quantity, 'Preparing', now, now]
+    );
+
+    const result = db.exec('SELECT last_insert_rowid()');
+    const newId = result[0].values[0][0];
+
+    saveDb();
+
+    const orderResult = db.exec(`SELECT * FROM orders WHERE id = ${newId}`);
+    const row = orderResult[0].values[0];
+    const newOrder = {
+      id: row[0],
+      item_name: row[1],
+      quantity: row[2],
+      status: row[3],
+      created_at: row[4],
+      updated_at: row[5]
+    };
+
+    res.status(201).json({
+      message: 'Order created successfully',
+      order: newOrder
+    });
+  } catch (err) {
+    res.status(500).json({ message: 'Unable to create order. Please try again.' });
+  }
 });
 
 router.patch('/:id/status', (req, res) => {
-  const { id } = req.params;
-  const db = getDb();
-  
-  const result = db.exec(`SELECT * FROM orders WHERE id = ${id}`);
-  if (result.length === 0 || result[0].values.length === 0) {
-    return res.status(404).json({ error: 'Order not found' });
+  try {
+    const { id } = req.params;
+    const db = getDb();
+
+    const result = db.exec(`SELECT * FROM orders WHERE id = ${id}`);
+    if (result.length === 0 || result[0].values.length === 0) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    const row = result[0].values[0];
+    const order = {
+      id: row[0],
+      item_name: row[1],
+      quantity: row[2],
+      status: row[3],
+      created_at: row[4],
+      updated_at: row[5]
+    };
+
+    const currentIndex = STATUS_FLOW.indexOf(order.status);
+    if (currentIndex === -1 || currentIndex >= STATUS_FLOW.length - 1) {
+      return res.status(400).json({ message: 'Order is already completed' });
+    }
+
+    const newStatus = STATUS_FLOW[currentIndex + 1];
+    const now = new Date().toISOString();
+    db.run(`UPDATE orders SET status = '${newStatus}', updated_at = '${now}' WHERE id = ${id}`);
+    saveDb();
+
+    const updatedResult = db.exec(`SELECT * FROM orders WHERE id = ${id}`);
+    const updatedRow = updatedResult[0].values[0];
+    const updatedOrder = {
+      id: updatedRow[0],
+      item_name: updatedRow[1],
+      quantity: updatedRow[2],
+      status: updatedRow[3],
+      created_at: updatedRow[4],
+      updated_at: updatedRow[5]
+    };
+
+    res.json({
+      message: `Order moved to ${newStatus}`,
+      order: updatedOrder
+    });
+  } catch (err) {
+    res.status(500).json({ message: 'Unable to update order status. Please try again.' });
   }
-  
-  const row = result[0].values[0];
-  const order = {
-    id: row[0],
-    item_name: row[1],
-    quantity: row[2],
-    status: row[3],
-    created_at: row[4],
-    updated_at: row[5]
-  };
-
-  const currentIndex = STATUS_FLOW.indexOf(order.status);
-  if (currentIndex === -1 || currentIndex >= STATUS_FLOW.length - 1) {
-    return res.status(400).json({ error: 'Order is already completed' });
-  }
-
-  const newStatus = STATUS_FLOW[currentIndex + 1];
-  const now = new Date().toISOString();
-  db.run(`UPDATE orders SET status = '${newStatus}', updated_at = '${now}' WHERE id = ${id}`);
-  saveDb();
-
-  const updatedResult = db.exec(`SELECT * FROM orders WHERE id = ${id}`);
-  const updatedRow = updatedResult[0].values[0];
-  const updatedOrder = {
-    id: updatedRow[0],
-    item_name: updatedRow[1],
-    quantity: updatedRow[2],
-    status: updatedRow[3],
-    created_at: updatedRow[4],
-    updated_at: updatedRow[5]
-  };
-  
-  res.json(updatedOrder);
 });
 
 module.exports = router;
