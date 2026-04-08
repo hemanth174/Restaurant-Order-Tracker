@@ -4,7 +4,8 @@ import OrderForm from './components/OrderForm'
 import OrderList from './components/OrderList'
 import { UtensilsCrossed } from 'lucide-react'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/orders'
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+const ORDERS_API = `${API_BASE}/api/orders`
 
 function App() {
   const [orders, setOrders] = useState([])
@@ -12,7 +13,7 @@ function App() {
 
   const fetchOrders = async () => {
     try {
-      const response = await axios.get(API_URL)
+      const response = await axios.get(ORDERS_API)
       setOrders(Array.isArray(response.data) ? response.data : [])
     } catch (error) {
       console.error('Error fetching orders:', error)
@@ -28,7 +29,7 @@ function App() {
 
   const handleCreateOrder = async (itemName, quantity) => {
     try {
-      const response = await axios.post(API_URL, { item_name: itemName, quantity })
+      const response = await axios.post(ORDERS_API, { item_name: itemName, quantity })
       setOrders([response.data, ...orders])
     } catch (error) {
       console.error('Error creating order:', error)
@@ -37,7 +38,7 @@ function App() {
 
   const handleUpdateStatus = async (orderId) => {
     try {
-      const response = await axios.patch(`${API_URL}/${orderId}/status`)
+      const response = await axios.patch(`${ORDERS_API}/${orderId}/status`)
       setOrders(orders.map(order => 
         order.id === orderId ? response.data : order
       ))
