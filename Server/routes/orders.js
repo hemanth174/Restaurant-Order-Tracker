@@ -3,21 +3,31 @@ const router = express.Router();
 const { getDb, saveDb } = require('../db/database');
 
 const STATUS_FLOW = ['Preparing', 'Ready', 'Completed'];
+const ORDER_COLUMNS = 'id, user_name, item_name, quantity, status, created_at, updated_at';
 
 function rowToOrder(row) {
   return {
     id: row[0],
-    item_name: row[1],
-    quantity: row[2],
-    status: row[3],
-    created_at: row[4],
-    updated_at: row[5]
+    user_name: row[1],
+    item_name: row[2],
+    quantity: row[3],
+    status: row[4],
+    created_at: row[5],
+    updated_at: row[6]
   };
 }
 
-function getOrders() {
+function getUserName(req) {
+  const userName = req.header('x-user-name');
+  return typeof userName === 'string' ? userName.trim() : '';
+}
+
+function getOrders(userName) {
   const db = getDb();
-  const result = db.exec('SELECT * FROM orders ORDER BY created_at DESC');
+  const result = db.exec(
+    `SELECT ${ORDER_COLUMNS} FROM orders WHERE user_name = ? ORDER BY created_at DESC`,
+    [userName]
+  );
 
   if (result.length === 0) {
     return [];
@@ -26,9 +36,12 @@ function getOrders() {
   return result[0].values.map(rowToOrder);
 }
 
-function getOrderById(id) {
+function getOrderById(id, userName) {
   const db = getDb();
-  const result = db.exec(`SELECT * FROM orders WHERE id = ${id}`);
+  const result = db.exec(
+    `SELECT ${ORDER_COLUMNS} FROM orders WHERE id = ? AND user_name = ?`,
+    [id, userName]
+  );
 
   if (result.length === 0 || result[0].values.length === 0) {
     return null;
@@ -39,9 +52,15 @@ function getOrderById(id) {
 
 router.get('/', (req, res) => {
   try {
+    const userName = getUserName(req);
+
+    if (!userName) {
+      return res.status(400).json({ message: 'User name is required' });
+    }
+
     res.json({
       message: 'Orders fetched successfully',
-      orders: getOrders()
+      orders: getOrders(userName)
     });
   } catch (err) {
     res.status(500).json({ message: 'Unable to fetch orders. Please try again.' });
@@ -50,7 +69,14 @@ router.get('/', (req, res) => {
 
 router.post('/', (req, res) => {
   try {
-    const { item_name, quantity = 1 } = req.body;
+    const { item_name, quantity = 1, user_name } = req.body;
+    const userName = typeof user_name === 'string' && user_name.trim()
+      ? user_name.trim()
+      : getUserName(req);
+
+    if (!userName) {
+      return res.status(400).json({ message: 'User name is required' });
+    }
 
     if (!item_name || item_name.trim() === '') {
       return res.status(400).json({ message: 'Item name is required' });
@@ -59,8 +85,8 @@ router.post('/', (req, res) => {
     const db = getDb();
     const now = new Date().toISOString();
     db.run(
-      'INSERT INTO orders (item_name, quantity, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
-      [item_name.trim(), quantity, 'Preparing', now, now]
+      'INSERT INTO orders (user_name, item_name, quantity, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
+      [userName, item_name.trim(), quantity, 'Preparing', now, now]
     );
 
     const result = db.exec('SELECT last_insert_rowid()');
@@ -70,7 +96,7 @@ router.post('/', (req, res) => {
 
     res.status(201).json({
       message: 'Order created successfully',
-      order: getOrderById(newId)
+      order: getOrderById(newId, userName)
     });
   } catch (err) {
     res.status(500).json({ message: 'Unable to create order. Please try again.' });
@@ -80,9 +106,14 @@ router.post('/', (req, res) => {
 router.patch('/:id/status', (req, res) => {
   try {
     const { id } = req.params;
+    const userName = getUserName(req);
     const db = getDb();
 
-    const order = getOrderById(id);
+    if (!userName) {
+      return res.status(400).json({ message: 'User name is required' });
+    }
+
+    const order = getOrderById(id, userName);
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
     }
@@ -99,7 +130,7 @@ router.patch('/:id/status', (req, res) => {
 
     res.json({
       message: `Order moved to ${newStatus}`,
-      order: getOrderById(id)
+      order: getOrderById(id, userName)
     });
   } catch (err) {
     res.status(500).json({ message: 'Unable to update order status. Please try again.' });

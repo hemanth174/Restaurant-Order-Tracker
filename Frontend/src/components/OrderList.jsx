@@ -1,14 +1,8 @@
 import { useState } from 'react'
 import OrderCard from './OrderCard'
-import { Flame, CheckCircle2, TicketCheck, Search, FileX2 } from 'lucide-react'
+import { Search, FileX2 } from 'lucide-react'
 
-const getStatusIcon = (status) => {
-  if (status === 'Preparing') return <Flame className="w-4 h-4 text-orange-500" />
-  if (status === 'Ready') return <TicketCheck className="w-4 h-4 text-blue-500" />
-  return <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-}
-
-function OrderList({ orders, onUpdateStatus }) {
+function OrderList({ orders, onUpdateStatus, userName }) {
   const [searchQuery, setSearchQuery] = useState('')
 
   const filteredOrders = orders.filter(order => 
@@ -40,8 +34,8 @@ function OrderList({ orders, onUpdateStatus }) {
             <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mb-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-slate-100">
               <FileX2 className="w-10 h-10 opacity-40 text-slate-500" strokeWidth={1.5} />
             </div>
-            <p className="font-bold text-lg text-slate-600 mb-2 tracking-tight">No matching orders found</p>
-            <p className="text-sm font-medium">Try searching for a different item name.</p>
+            <p className="font-bold text-lg text-slate-600 mb-2 tracking-tight">No orders found for {userName}</p>
+            <p className="text-sm font-medium">Create an order or try searching for a different item name.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-5 animate-in fade-in duration-500">
