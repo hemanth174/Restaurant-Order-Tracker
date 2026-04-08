@@ -9,7 +9,32 @@ const PORT = process.env.PORT || 3001;
 let dbReady = false;
 let startupError = null;
 
-app.use(cors());
+const defaultAllowedOrigins = [
+  'http://localhost:5173',
+  'https://restaurant-order-tracker-sand.vercel.app'
+];
+
+const allowedOrigins = (
+  process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim()).filter(Boolean)
+    : defaultAllowedOrigins
+);
+
+const corsOptions = {
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    callback(new Error(`Origin ${origin} is not allowed by CORS`));
+  },
+  methods: ['GET', 'POST', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'x-user-name']
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 app.use(express.json());
 
 function getHealthResponse() {

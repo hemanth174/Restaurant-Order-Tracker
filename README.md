@@ -59,7 +59,9 @@ Frontend runs on `http://localhost:5173`
 2. Set root directory to `Server`
 3. Build command: `npm install`
 4. Start command: `npm start`
-5. After deployment, verify `https://your-render-url/api/health` returns JSON
+5. Add env variable `ALLOWED_ORIGINS` with your frontend origin
+6. Example: `ALLOWED_ORIGINS=https://restaurant-order-tracker-sand.vercel.app`
+7. After deployment, verify `https://your-render-url/api/health` returns JSON
 
 ### Frontend (Vercel)
 
